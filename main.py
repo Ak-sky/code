@@ -44,6 +44,11 @@ def create_next_id():
     return max(country["id"] for country in countries) + 1
 
 
+@APP.get('/')
+def running():
+    return jsonify("Server Running Fine")
+    
+
 @APP.post("/auth")
 def auth():
     request_data = request.get_json()
