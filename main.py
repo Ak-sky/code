@@ -1,39 +1,71 @@
-from flask import Flask, request, jsonify, make_response
-from flask_httpauth import HTTPBasicAuth
-from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps
+from flask import Flask, jsonify, request, abort
+import datetime
+import os
+import jwt
+import functools
 
-app = Flask(__name__)
-auth = HTTPBasicAuth()
 
-users = {
-    "akash": generate_password_hash("ibm")
-}
+JWT_SECRET = os.environ.get('JWT_SECRET', 'abc123abc1234')
+
+APP = Flask(__name__)
+
 
 countries = [
-    {"id": 1, "name": "Thailand", "capital": "Bangkok", "area": 513120},
+    {"id": 1, "name": "India", "capital": "Delhi", "area": 513120},
     {"id": 2, "name": "Australia", "capital": "Canberra", "area": 7617930},
-    {"id": 3, "name": "Egypt", "capital": "Cairo", "area": 1010408},
+    {"id": 3, "name": "Srilanka", "capital": "Colombo", "area": 1010408},
 ]
 
-@auth.verify_password
-def verify_password(username, password):
-    if username in users and check_password_hash(users.get(username), password):
-        return username
+
+def require_jwt(function):
+    @functools.wraps(function)
+    def decorated_function(*args, **kws):
+        if not 'Authorization' in request.headers:
+            abort(401)
+        data = request.headers['Authorization']
+        token = str.replace(str(data), 'bearer ', '')
+        try:
+            jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+        except: 
+            abort(401)
+        return function(*args, **kws)
+    return decorated_function
+
+
+def get_jwt(user_data):
+    exp_time = datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
+    payload = {'exp': exp_time,
+               'nbf': datetime.datetime.utcnow(),
+               'email': user_data['email']}
+    return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
 
 def create_next_id(): 
     return max(country["id"] for country in countries) + 1
 
 
-@app.get("/countries")
-@auth.login_required
+@APP.post("/auth")
+def auth():
+    request_data = request.get_json()
+    email = request_data.get('email')
+    password = request_data.get('password')
+    if not email:
+        return jsonify({"message": "Missing parameter: email"}, 400)
+    if not password:
+        return jsonify({"message": "Missing parameter: password"}, 400)
+    body = {'email': email, 'password': password}
+    user_data = body
+    return jsonify(token=get_jwt(user_data).decode('utf-8'))
+
+
+@APP.get("/countries")
+@require_jwt
 def get_countries():
-    return jsonify(countries)
+    return jsonify(countries), 200
 
 
-@app.post("/countries")
-@auth.login_required
+@APP.post("/countries")
+@require_jwt
 def add_country():
     if request.is_json:
         country = request.get_json()
@@ -44,4 +76,4 @@ def add_country():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    APP.run(host='0.0.0.0', port=8080, debug=True)

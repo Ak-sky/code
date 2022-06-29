@@ -13,4 +13,4 @@ RUN pip install -r requirements.txt
 EXPOSE 80
 
 # Run app.py at container launch
-ENTRYPOINT ["gunicorn", "-b", ":8080", "main:app"]
+ENTRYPOINT ["gunicorn", "-b", ":8080", "main:APP"]
