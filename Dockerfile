@@ -10,7 +10,7 @@ COPY . /app/
 RUN pip install -r requirements.txt
 
 #Export port
-EXPOSE 8080
+EXPOSE 80
 
 # Run app.py at container launch
 ENTRYPOINT ["gunicorn", "-b", ":8080", "main:APP"]
