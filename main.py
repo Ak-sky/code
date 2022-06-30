@@ -46,7 +46,7 @@ def create_next_id():
 
 @APP.get('/')
 def running():
-    return jsonify("Server Running Fine")
+    return jsonify("Server Running Fine!!!")
 
 
 @APP.post("/auth")
